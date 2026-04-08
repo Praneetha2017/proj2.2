@@ -1,0 +1,104 @@
+.auth-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background-color: var(--bg-color);
+  background-image: radial-gradient(circle at top left, #1a1a2e, #0d0d0d);
+}
+
+.auth-card {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 40px;
+  border-radius: 20px;
+  width: 100%;
+  max-width: 450px;
+  backdrop-filter: blur(15px);
+  box-shadow: 0 15px 35px rgba(0,0,0,0.5);
+  display: flex;
+  flex-direction: column;
+}
+
+.auth-header {
+  display: flex;
+  justify-content: center;
+  gap: 30px;
+  margin-bottom: 30px;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+  padding-bottom: 10px;
+}
+
+.auth-header h2 {
+  font-size: 1.5rem;
+  color: #777;
+  cursor: pointer;
+  transition: color 0.3s;
+}
+
+.auth-header h2.active {
+  color: var(--accent-color);
+  border-bottom: 2px solid var(--accent-color);
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.auth-form .form-group input,
+.auth-form .form-group select {
+  width: 100%;
+  padding: 15px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  color: #fff;
+  font-family: inherit;
+  font-size: 1rem;
+  transition: border-color 0.3s;
+}
+
+.auth-form .form-group select option {
+  background-color: #1a1a2e;
+  color: #fff;
+}
+
+.auth-form .form-group input:focus,
+.auth-form .form-group select:focus {
+  outline: none;
+  border-color: var(--accent-color);
+}
+
+.auth-btn {
+  background-color: var(--accent-color);
+  color: #000;
+  border: none;
+  padding: 15px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: transform 0.2s, background-color 0.3s;
+  margin-top: 10px;
+}
+
+.auth-btn:hover {
+  background-color: #e5930e;
+  transform: translateY(-2px);
+}
+
+.back-btn {
+  margin-top: 25px;
+  background: transparent;
+  border: none;
+  color: #888;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: color 0.3s;
+}
+
+.back-btn:hover {
+  color: #fff;
+}

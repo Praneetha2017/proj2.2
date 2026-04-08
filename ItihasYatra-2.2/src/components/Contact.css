@@ -1,0 +1,111 @@
+.contact-section {
+  padding: 100px 20px;
+  background-color: #0d0d0d;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.contact-container {
+  max-width: 1000px;
+  width: 100%;
+}
+
+.contact-subtitle {
+  text-align: center;
+  color: #aaa;
+  margin-top: -40px;
+  margin-bottom: 60px;
+  font-size: 1.1rem;
+}
+
+.contact-box {
+  display: grid;
+  grid-template-columns: 3fr 2fr;
+  gap: 50px;
+  background: rgba(255, 255, 255, 0.03);
+  padding: 50px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.contact-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.form-group input,
+.form-group textarea {
+  width: 100%;
+  padding: 15px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 8px;
+  color: #fff;
+  font-family: inherit;
+  font-size: 1rem;
+  transition: border-color 0.3s;
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: var(--accent-color);
+}
+
+.submit-btn {
+  background-color: var(--accent-color);
+  color: #000;
+  border: none;
+  padding: 15px 30px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.3s, transform 0.2s;
+  align-self: flex-start;
+}
+
+.submit-btn:hover {
+  background-color: #e5930e;
+  transform: translateY(-2px);
+}
+
+.contact-info {
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+  justify-content: center;
+  border-left: 1px solid rgba(255,255,255,0.1);
+  padding-left: 50px;
+}
+
+.info-item {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.info-icon {
+  font-size: 1.5rem;
+}
+
+.info-item p {
+  color: #ddd;
+  font-size: 1.1rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .contact-box {
+    grid-template-columns: 1fr;
+  }
+  .contact-info {
+    border-left: none;
+    border-top: 1px solid rgba(255,255,255,0.1);
+    padding-left: 0;
+    padding-top: 30px;
+  }
+}

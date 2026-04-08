@@ -1,0 +1,233 @@
+/* GuideDashboard.css */
+.guide-container {
+  background-color: #0d0d12;
+  min-height: 100vh;
+  padding-bottom: 50px;
+  background-image: 
+    radial-gradient(circle at 15% 50%, rgba(13, 202, 240, 0.05), transparent 25%),
+    radial-gradient(circle at 85% 30%, rgba(252, 163, 17, 0.05), transparent 25%);
+}
+
+.guide-header {
+  border-bottom: 1px solid rgba(13, 202, 240, 0.2);
+  padding-bottom: 30px;
+  padding-top: 140px;
+  background: rgba(10, 10, 15, 0.95);
+  text-align: center;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+  backdrop-filter: blur(10px);
+}
+
+.guide-header h1 {
+  color: #0dcaf0;
+  margin: 0;
+  font-family: var(--display-font);
+  font-size: 2.8rem;
+  text-shadow: 0 0 20px rgba(13, 202, 240, 0.3);
+  letter-spacing: 1px;
+}
+
+.guide-header p {
+  color: #aaa;
+  margin-top: 15px;
+  font-size: 1.1rem;
+}
+
+.guide-content {
+  padding: 50px 40px;
+  max-width: 1300px;
+  margin: 0 auto;
+}
+
+.guide-content h2 {
+  color: #fff;
+  margin-bottom: 35px;
+  border-left: 5px solid #0dcaf0;
+  padding-left: 20px;
+  font-family: var(--display-font);
+  font-size: 2rem;
+  letter-spacing: 1px;
+}
+
+.guide-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+  gap: 30px;
+}
+
+.guide-card {
+  background: rgba(15, 15, 20, 0.8);
+  border: 1px solid rgba(13, 202, 240, 0.2);
+  border-radius: 16px;
+  padding: 30px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.4);
+  transition: transform 0.3s, box-shadow 0.3s, border-color 0.3s;
+  backdrop-filter: blur(10px);
+}
+
+.guide-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 15px 50px rgba(13, 202, 240, 0.15);
+  border-color: rgba(13, 202, 240, 0.5);
+}
+
+.guide-card-header {
+  display: flex;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  padding-bottom: 15px;
+  margin-bottom: 20px;
+  align-items: center;
+}
+
+.guide-card-header h3 {
+  color: #0dcaf0;
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.trip-state-badge {
+  background: rgba(252, 163, 17, 0.15);
+  color: #fca311;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: bold;
+  letter-spacing: 1px;
+  border: 1px solid rgba(252, 163, 17, 0.3);
+}
+
+.guide-card-details p {
+  color: #bbb;
+  margin: 8px 0;
+  font-size: 0.95rem;
+  display: flex;
+  justify-content: space-between;
+}
+.guide-card-details strong {
+  color: #eee;
+}
+
+.chat-portal {
+  background: rgba(5, 5, 8, 0.9);
+  border: 1px solid rgba(255,255,255,0.05);
+  border-radius: 12px;
+  flex-grow: 1;
+  padding: 20px;
+  margin-top: 25px;
+  min-height: 200px;
+  max-height: 300px;
+  overflow-y: auto;
+  box-shadow: inset 0 5px 20px rgba(0,0,0,0.5);
+}
+
+.chat-portal h5 {
+  color: #0dcaf0;
+  margin-top: 0;
+  margin-bottom: 20px;
+  border-bottom: 1px dashed rgba(13, 202, 240, 0.3);
+  padding-bottom: 10px;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.chat-msg {
+  font-size: 0.9rem;
+  margin: 12px 0;
+  padding: 12px 15px;
+  border-radius: 12px;
+  line-height: 1.4;
+}
+
+.chat-msg.guide {
+  color: #fff;
+  background: rgba(13, 202, 240, 0.1);
+  border-left: 3px solid #0dcaf0;
+}
+
+.chat-msg.client {
+  color: #ccc;
+  background: rgba(255,255,255,0.03);
+  border-left: 3px solid #fca311;
+}
+
+.chat-sender {
+  display: block;
+  font-size: 0.75rem;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.chat-sender.guide { color: #0dcaf0; }
+.chat-sender.client { color: #fca311; }
+
+.chat-time {
+  float: right;
+  color: #666;
+  font-weight: normal;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.guide-actions {
+  display: flex;
+  gap: 15px;
+  margin-top: 25px;
+}
+
+.guide-btn-chat, .guide-btn-complete {
+  flex: 1;
+  padding: 14px;
+  border: none;
+  border-radius: 8px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 1rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+}
+
+.guide-btn-chat {
+  background: rgba(13, 202, 240, 0.1);
+  color: #0dcaf0;
+  border: 1px solid rgba(13, 202, 240, 0.3);
+}
+.guide-btn-chat:hover {
+  background: #0dcaf0;
+  color: #000;
+  box-shadow: 0 0 20px rgba(13, 202, 240, 0.4);
+}
+
+.guide-btn-complete {
+  background: rgba(40, 167, 69, 0.1);
+  color: #28a745;
+  border: 1px solid rgba(40, 167, 69, 0.3);
+}
+.guide-btn-complete:hover {
+  background: #28a745;
+  color: #fff;
+  box-shadow: 0 0 20px rgba(40, 167, 69, 0.4);
+}
+
+.empty-state {
+  padding: 60px;
+  background: rgba(255,255,255,0.02);
+  border-radius: 16px;
+  text-align: center;
+  border: 1px dashed rgba(255,255,255,0.1);
+}
+.empty-state h3 {
+  color: #888;
+  font-family: var(--display-font);
+  font-size: 1.8rem;
+}
+.empty-state p {
+  color: #555;
+}

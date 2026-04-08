@@ -1,0 +1,68 @@
+.state-container { padding: 40px; color: #fff; max-width: 1200px; margin: 0 auto; }
+.state-hero { text-align: center; margin-bottom: 60px; }
+.state-hero h1 { color: var(--accent-color); font-size: 3.5rem; margin-bottom: 25px; font-family: var(--display-font); }
+
+.state-desc-long {
+  font-size: 1.15rem;
+  line-height: 1.8;
+  color: #ddd;
+  max-width: 900px;
+  margin: 0 auto;
+  text-align: justify;
+  background: rgba(0,0,0,0.3);
+  padding: 30px;
+  border-radius: 12px;
+  border-left: 4px solid var(--accent-color);
+  box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+}
+
+.state-sections section { margin-bottom: 60px; }
+.state-sections h2 { border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 15px; margin-bottom: 30px; font-family: var(--display-font); font-size: 2rem; color: #fdfdfd; }
+.cards-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 25px; }
+
+.spot-card { 
+  background: rgba(255,255,255,0.03); 
+  padding: 30px; 
+  border-radius: 15px; 
+  text-align: center; 
+  cursor: pointer; 
+  transition: transform 0.3s, border-color 0.3s, background 0.3s; 
+  border: 1px solid rgba(255,255,255,0.05); 
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.spot-card:hover { transform: translateY(-8px); border-color: var(--accent-color); background: rgba(255,255,255,0.06); }
+.spot-card.expanded { border-color: var(--accent-color); background: rgba(255,255,255,0.08); box-shadow: 0 10px 25px rgba(0,0,0,0.5); transform: translateY(-3px); }
+
+/* Special Virtual Tour Card Styling */
+.virtual-tour-card {
+  border-color: rgba(13, 202, 240, 0.4);
+}
+.virtual-tour-card:hover { border-color: #0dcaf0; }
+
+.spot-icon { font-size: 3.5rem; margin-bottom: 15px; }
+.spot-card h3 { color: var(--accent-color); margin-bottom: 15px; font-size: 1.4rem; }
+.spot-card p { color: #aaa; margin-bottom: 10px; line-height: 1.5; }
+
+.click-to-expand { color: var(--accent-color) !important; font-size: 0.95rem !important; font-weight: bold; margin-top: 20px !important; margin-bottom: 0 !important; opacity: 0.8; }
+.click-to-expand:hover { opacity: 1; }
+
+.spot-specialty { background: rgba(0,0,0,0.5); padding: 20px; border-radius: 8px; margin-top: 20px; color: #eee; text-align: left; border-left: 3px solid var(--accent-color); font-size: 1rem; line-height: 1.6; }
+
+.slide-down { animation: slideDown 0.3s ease-out forwards; }
+@keyframes slideDown { from { opacity: 0; transform: translateY(-15px); } to { opacity: 1; transform: translateY(0); } }
+
+.view-btn { background: transparent; border: 1px solid var(--accent-color); color: var(--accent-color); padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.3s; width: 100%; }
+.view-btn:hover { background: var(--accent-color); color: #000; }
+
+.vr-btn { border-color: #0dcaf0; color: #0dcaf0; }
+.vr-btn:hover { background: #0dcaf0; color: #000; }
+
+.plan-section { text-align: center; margin-top: 80px; padding: 50px; background: rgba(252, 163, 17, 0.05); border-radius: 20px; border: 1px dashed var(--accent-color); }
+.plan-section h2 { color: var(--accent-color); font-size: 2.2rem; margin-bottom: 15px; }
+.plan-section p { margin-bottom: 30px; color: #bbb; }
+.plan-btn { background: var(--accent-color); color: #000; padding: 15px 35px; font-size: 1.2rem; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; transition: 0.3s; }
+.plan-btn:hover { background: #e5930e; transform: scale(1.05); }

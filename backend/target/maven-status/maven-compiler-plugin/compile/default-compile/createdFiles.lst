@@ -1,0 +1,5 @@
+com\itihasyatra\model\TripRequest$Status.class
+com\itihasyatra\model\User$Role.class
+com\itihasyatra\model\User.class
+com\itihasyatra\repository\TripRequestRepository.class
+com\itihasyatra\model\TripRequest.class
