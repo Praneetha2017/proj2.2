@@ -1,333 +1,286 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import './Profile.css';
 
 const Profile = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('details');
   const [isEditing, setIsEditing] = useState(false);
-  const [profileData, setProfileData] = useState(() => {
-    const savedUser = JSON.parse(localStorage.getItem('currentUser'));
-    if (savedUser) {
-      return {
-        name: savedUser.username || savedUser.email.split('@')[0],
-        email: savedUser.email,
-        role: savedUser.role || 'Cultural Enthusiast',
-        status: savedUser.status || 'Approved'
-      };
-    }
-    return {
-      name: 'Guest User',
-      email: 'guest@itihasyatra.com',
-      role: 'Cultural Enthusiast'
-    };
-  });
-  const [guideApplicationStatus, setGuideApplicationStatus] = useState(() => {
-    const apps = JSON.parse(localStorage.getItem('mockGuideApplicationsDB')) || {};
-    return apps[profileData.email] || null;
-  });
-  const [guideProofFile, setGuideProofFile] = useState(null);
-  const [guideProofName, setGuideProofName] = useState('');
-  const [guideLang, setGuideLang] = useState('');
-  const [guideExp, setGuideExp] = useState('');
-  const [guideDesc, setGuideDesc] = useState('');
 
-  const readFileAsDataURL = (file) => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result);
-      reader.onerror = () => reject(new Error('File read failed'));
-      reader.readAsDataURL(file);
-    });
-  };
-
-  // Pull Universal Trips Database
-  const [tripsDB, setTripsDBState] = useState(() => {
-    return JSON.parse(localStorage.getItem('mockTripsDB')) || [];
+  const [user, setUser] = useState(() => {
+    const saved = localStorage.getItem('currentUser');
+    return saved ? JSON.parse(saved) : {};
   });
 
-  const setTripsDB = (newTrips) => {
-    setTripsDBState(newTrips);
-    localStorage.setItem('mockTripsDB', JSON.stringify(newTrips));
-  };
+  const [trips, setTrips] = useState([]);
+  const [applicationStatus, setApplicationStatus] = useState(null);
 
-  const handleSendMessage = (tripId, targetName) => {
-    const msg = prompt(`Type your message to ${targetName}:`);
-    if (!msg) return;
-    const newTrips = tripsDB.map(t => {
-      if (t.id === tripId) {
-        const history = t.messages || [];
-        return { ...t, messages: [...history, { sender: profileData.name, text: msg, time: new Date().toLocaleTimeString() }] };
+  useEffect(() => {
+    const fetchAppStatus = async () => {
+      if (user?.id || user?.email) {
+          // If we don't have ID, maybe wait or try to use email, but the backend requires userId.
+          // Let's rely on the auto-heal later or fetch with the healed ID.
       }
-      return t;
-    });
-    setTripsDB(newTrips);
+      let currentId = user?.id;
+      if (!currentId && user?.email) {
+          try {
+            const usersResp = await axios.get(`http://localhost:8080/api/auth/users`);
+            const dbUser = usersResp.data.find(u => u.email === user.email);
+            if (dbUser) currentId = dbUser.id;
+          } catch(e) {}
+      }
+      if (currentId) {
+          try {
+             const res = await axios.get(`http://localhost:8080/api/guide-applications/user/${currentId}`);
+             if (res.data && res.data.length > 0) {
+                 const latestApp = res.data[res.data.length - 1];
+                 // Map the backend status (PENDING, APPROVED, REJECTED)
+                 const mappedStatus = latestApp.status === 'APPROVED' ? 'Approved' : (latestApp.status === 'REJECTED' ? 'Rejected' : 'Pending');
+                 setApplicationStatus({ ...latestApp, status: mappedStatus });
+             }
+          } catch(e) {
+             console.error("Error fetching application status:", e);
+          }
+      }
+    };
+    fetchAppStatus();
+  }, [user?.id, user?.email]);
+
+  const [guideForm, setGuideForm] = useState({
+    name: user.username || '',
+    email: user.email || '',
+    languages: '',
+    experience: '',
+    description: ''
+  });
+
+  const handleGuideChange = (e) => {
+    setGuideForm({ ...guideForm, [e.target.name]: e.target.value });
   };
 
-  const handleSave = () => {
-    setIsEditing(false);
-    
-    // Save locally to simulate backend sync
-    const currentUser = JSON.parse(localStorage.getItem('currentUser')) || {};
-    const updatedUser = { ...currentUser, email: profileData.email, role: profileData.role, username: profileData.name, status: profileData.status || currentUser.status || 'Approved' };
-    localStorage.setItem('currentUser', JSON.stringify(updatedUser));
+  const handleApplyGuide = async (e) => {
+    e.preventDefault();
+    try {
+      const appPayload = {
+        name: guideForm.name,
+        email: guideForm.email,
+        languages: guideForm.languages,
+        experience: guideForm.experience,
+        description: guideForm.description,
+        proofName: 'id-proof.pdf', // Placeholder
+        proofData: null // Assuming backend can accept null temporarily or bytes
+      };
 
-    // Sync global mock database memory
-    if (currentUser.email) {
-       const usersDB = JSON.parse(localStorage.getItem('mockUsersDB')) || {};
-       if (usersDB[currentUser.email]) {
-         usersDB[profileData.email] = { ...usersDB[currentUser.email], ...updatedUser };
-         if (profileData.email !== currentUser.email) delete usersDB[currentUser.email];
-         localStorage.setItem('mockUsersDB', JSON.stringify(usersDB));
-       }
+      await axios.post('http://localhost:8080/api/guide-applications/apply', appPayload);
+
+      setApplicationStatus({ ...appPayload, status: 'Pending' });
+
+      alert('Application submitted successfully! Admins can now approve you from the Admin Dashboard.');
+
+      setGuideForm({ ...guideForm, languages: '', experience: '', description: '' });
+    } catch (err) {
+      console.error(err);
+      alert('Error submitting application to backend. Check console.');
     }
-
-    alert('Profile updated and securely synced to Local Database Memory!');
   };
 
-  const handleChange = (e) => {
-    setProfileData({ ...profileData, [e.target.name]: e.target.value });
+  useEffect(() => {
+    const fetchTrips = async () => {
+      let currentId = user.id;
+
+      // Self-healing function if ID is missing from local storage
+      if (!currentId && user.email) {
+        try {
+          const usersResp = await axios.get(`http://localhost:8080/api/auth/users`);
+          const dbUser = usersResp.data.find(u => u.email === user.email);
+          if (dbUser) {
+            currentId = dbUser.id;
+            const updatedUser = { ...user, id: dbUser.id };
+            setUser(updatedUser);
+            localStorage.setItem('currentUser', JSON.stringify(updatedUser));
+          }
+        } catch (e) {
+          console.error("Could not heal user ID", e);
+        }
+      }
+
+      if (!currentId) return;
+
+      try {
+        const response = await axios.get(`http://localhost:8080/api/trips/user/${currentId}`);
+        
+        const tripsWithChats = await Promise.all(response.data.map(async (trip) => {
+           if (trip.status === 'ASSIGNED') {
+               try {
+                   // Frontend-only chat mock
+                   const chatDb = JSON.parse(localStorage.getItem('mockChats')) || {};
+                   return { ...trip, messages: chatDb[trip.id] || [] };
+               } catch(e) {
+                   return { ...trip, messages: [] };
+               }
+           }
+           return { ...trip, messages: [] };
+        }));
+        
+        setTrips(tripsWithChats);
+      } catch (error) {
+        console.error("Database Fetch Error:", error);
+      }
+    };
+
+    if (activeTab === 'trips') {
+      fetchTrips();
+    }
+  }, [user.id, user.email, activeTab]);
+
+  const handleSendMessage = async (tripId, targetName) => {
+    const msg = prompt(`Type your message to your Guide, ${targetName}:`);
+    if (!msg) return;
+    
+    try {
+      // Frontend-only mock storage
+      const chatDb = JSON.parse(localStorage.getItem('mockChats')) || {};
+      const tripHistory = chatDb[tripId] || [];
+      const newMsg = { sender: user.username, text: msg, time: new Date().toLocaleTimeString() };
+      chatDb[tripId] = [...tripHistory, newMsg];
+      localStorage.setItem('mockChats', JSON.stringify(chatDb));
+      
+      const newTrips = trips.map(t => {
+        if (t.id === tripId) {
+          const history = t.messages || [];
+          return { ...t, messages: [...history, { sender: user.username, text: msg, time: new Date().toLocaleTimeString() }] };
+        }
+        return t;
+      });
+      setTrips(newTrips);
+    } catch(e) {
+       alert("Error sending message to backend!");
+    }
   };
+
+
 
   return (
     <div className="profile-container">
       <div className="profile-sidebar">
-        <h2>{profileData.role} Profile</h2>
-        <button className={activeTab === 'details' ? 'active' : ''} onClick={() => setActiveTab('details')}>👤 Profile Details</button>
-        
-        {/* Dynamic Tabs purely based on the user's explicit Role */}
-        {(profileData.role === 'Cultural Enthusiast' || profileData.role === 'Guest User' || !profileData.role) && (
+        <div className="sidebar-header">
+          <h2 className="role-display">{user.role?.replace('_', ' ')}</h2>
+          <p className="profile-label">Profile Dashboard</p>
+        </div>
+
+        <button className={activeTab === 'details' ? 'active' : ''} onClick={() => setActiveTab('details')}>👤 Details</button>
+
+        {/* Navigation logic remains common */}
+        {user.role === 'CULTURAL_ENTHUSIAST' && (
           <>
             <button className={activeTab === 'trips' ? 'active' : ''} onClick={() => setActiveTab('trips')}>✈️ My Trips</button>
-            <button className={activeTab === 'guide' ? 'active' : ''} onClick={() => setActiveTab('guide')}>🎓 Apply as Guide</button>
           </>
         )}
 
-        {profileData.role === 'Tour Guide' && (
-          <button className={activeTab === 'history' ? 'active' : ''} onClick={() => setActiveTab('history')}>📚 Guiding History</button>
+        {user.role === 'TOUR_GUIDE' && (
+          <button className={activeTab === 'history' ? 'active' : ''} onClick={() => setActiveTab('history')}>📚 History</button>
         )}
 
-        {profileData.role === 'Admin' && (
-          <button className="" onClick={() => navigate('/admin')}>⚙️ Admin Portal &rarr;</button>
-        )}
-
-        {profileData.role === 'Content Creator' && (
-          <button className="" onClick={() => navigate('/creator')}>🖍️ Creator Studio &rarr;</button>
-        )}
-        
-        <button 
-          className="logout-btn" 
-          onClick={() => {
-            localStorage.removeItem('currentUser'); // Sever the memory session!
-            alert('Logged out successfully!');
-            navigate('/');
-          }}
-          style={{marginTop: 'auto', borderTop: '1px solid rgba(255,255,255,0.1)', color: '#ff4757', fontWeight: 'bold'}}
-        >
-          🚪 Logout
-        </button>
+        <button className="logout-btn" onClick={() => {
+          localStorage.removeItem('currentUser');
+          localStorage.removeItem('jwtToken');
+          navigate('/');
+        }}>🚪 Logout</button>
       </div>
 
       <div className="profile-content">
         {activeTab === 'details' && (
           <div className="tab-pane animate-fade">
-            <h3>Personal Details</h3>
+            <h3>Personal Information</h3>
             <div className="details-card">
-              {isEditing ? (
-                <div className="edit-profile-form">
-                  <div style={{marginBottom: '15px'}}>
-                    <strong style={{display: 'inline-block', width: '80px', color: '#fff'}}>Name:</strong>
-                    <input type="text" name="name" value={profileData.name} onChange={handleChange} 
-                      style={{padding: '10px', borderRadius: '5px', border: '1px solid #555', background: 'rgba(255,255,255,0.1)', color: '#fff', width: '250px'}} />
-                  </div>
-                  <div style={{marginBottom: '15px'}}>
-                    <strong style={{display: 'inline-block', width: '80px', color: '#fff'}}>Email:</strong>
-                    <input type="email" name="email" value={profileData.email} onChange={handleChange} 
-                      style={{padding: '10px', borderRadius: '5px', border: '1px solid #555', background: 'rgba(255,255,255,0.1)', color: '#fff', width: '250px'}} />
-                  </div>
-                  <div style={{marginBottom: '20px'}}>
-                    <strong style={{display: 'inline-block', width: '80px', color: '#fff'}}>Role:</strong>
-                    <select name="role" value={profileData.role} onChange={handleChange}
-                      style={{padding: '10px', borderRadius: '5px', border: '1px solid #555', background: '#333', color: '#fff', width: '250px'}}>
-                      <option value="Cultural Enthusiast">Cultural Enthusiast</option>
-                      <option value="Content Creator">Content Creator</option>
-                      <option value="Tour Guide">Tour Guide</option>
-                    </select>
-                  </div>
-                  <button className="edit-btn" onClick={handleSave} style={{background: 'var(--accent-color)', color: '#000', fontWeight: 'bold'}}>Save Profile</button>
-                  <button className="edit-btn" onClick={() => setIsEditing(false)} style={{marginLeft: '15px', color: '#aaa', borderColor: '#555', background: 'transparent'}}>Cancel</button>
-                </div>
-              ) : (
-                <>
-                  <p><strong>Name:</strong> {profileData.name}</p>
-                  <p><strong>Email:</strong> {profileData.email}</p>
-                  <p><strong>Role:</strong> {profileData.role}</p>
-                  {profileData.status && <p><strong>Status:</strong> {profileData.status}</p>}
-                  <button className="edit-btn" onClick={() => setIsEditing(true)}>Edit Profile</button>
-                </>
-              )}
+              <p><strong>Database ID:</strong> {user.id}</p>
+              <p><strong>Name:</strong> {user.username}</p>
+              <p><strong>Email:</strong> {user.email}</p>
+              <button className="edit-btn" onClick={() => setIsEditing(!isEditing)}>
+                {isEditing ? 'Cancel' : 'Edit Profile'}
+              </button>
             </div>
           </div>
         )}
 
         {activeTab === 'trips' && (
           <div className="tab-pane animate-fade">
-            <h3>My Trips</h3>
-            {tripsDB.filter(t => t.email === profileData.email || t.email === 'priya@example.com').map(trip => (
-              <div key={trip.id} className={`trip-card ${trip.status === 'Approved' ? 'completed' : 'planned'}`}>
-                <div className="trip-header">
-                  <h4>Trip to {trip.state}</h4>
-                  <span className={`badge ${trip.status === 'Approved' ? 'completed-badge' : 'planned-badge'}`}>{trip.status}</span>
-                </div>
-                <p>Dates: {trip.dates} | People: {trip.people}</p>
-                
-                {trip.assignedGuide ? (
-                  <>
-                    <hr style={{borderColor: '#444', margin: '15px 0'}}/>
-                    <p className="guide-status" style={{color: '#0dcaf0'}}><strong>Guide Assigned:</strong> {trip.assignedGuide.name} (📞 {trip.assignedGuide.phone})</p>
-                    
-                    <div style={{background: '#111', padding: '15px', borderRadius: '10px', marginTop: '10px', maxHeight: '250px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px'}}>
-                      {trip.messages && trip.messages.length > 0 ? trip.messages.map((m, i) => (
-                        <div key={i} style={{
-                          display: 'flex',
-                          justifyContent: m.sender === profileData.name ? 'flex-end' : 'flex-start',
-                          marginBottom: '5px'
-                        }}>
-                          <div style={{
-                            maxWidth: '70%',
-                            padding: '10px 14px',
-                            borderRadius: m.sender === profileData.name ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
-                            background: m.sender === profileData.name ? '#0dcaf0' : '#25d366',
-                            color: m.sender === profileData.name ? '#000' : '#000',
-                            wordWrap: 'break-word'
-                          }}>
-                            <p style={{margin: 0, fontSize: '0.95rem', fontWeight: '500'}}>{m.text}</p>
-                            <p style={{margin: '4px 0 0 0', fontSize: '0.7rem', opacity: 0.7}}>{m.time}</p>
-                          </div>
-                        </div>
-                      )) : <p style={{color: '#666', fontSize: '0.85rem', textAlign: 'center'}}>💬 No messages yet. Start the conversation!</p>}
+            <h3>My Trip Requests (MySQL)</h3>
+            <div className="trips-container">
+              {trips.length > 0 ? (
+                trips.map(trip => (
+                  <div key={trip.id} className={`trip-db-card ${trip.status === 'ASSIGNED' ? 'assigned-border' : ''}`}>
+                    <div className="trip-db-header">
+                      <h4>Destination: {trip.state}</h4>
+                      <span className={`status-badge ${trip.status.toLowerCase()}`}>{trip.status}</span>
                     </div>
+                    <div className="trip-db-body">
+                      <p>🗓️ {trip.startDate} to {trip.endDate}</p>
+                      <p>👥 {trip.numPeople} Travelers</p>
 
-                    <button className="action-btn" onClick={() => handleSendMessage(trip.id, trip.assignedGuide.name)} style={{marginTop: '15px'}}>Message Guide</button>
-                  </>
-                ) : (
-                  <p style={{color: '#fca311', marginTop: '10px'}}>Pending Guide Assignment from Admin...</p>
-                )}
-              </div>
-            ))}
-            {tripsDB.filter(t => t.email === profileData.email || t.email === 'priya@example.com').length === 0 && (
-              <p style={{color: '#aaa', fontStyle: 'italic'}}>You have no active trips.</p>
-            )}
-          </div>
-        )}
+                      <hr className="card-divider" />
 
-        {activeTab === 'guide' && (profileData.role === 'Cultural Enthusiast' || !profileData.role) &&  (
-          <div className="tab-pane animate-fade">
-            <h3>Tour Guide Application</h3>
-            
-            {guideApplicationStatus?.status === 'Approved' ? (
-              <div style={{background: 'rgba(40,167,69,0.2)', border: '2px solid #28a745', padding: '20px', borderRadius: '10px', marginBottom: '20px'}}>
-                <h4 style={{color: '#28a745', margin: '0 0 10px 0'}}>✅ Congratulations! You are an Approved Guide</h4>
-                <p style={{color: '#0dcaf0', fontWeight: 'bold'}}>Use this email to sign up on the Guide Portal:</p>
-                <div style={{background: '#000', padding: '15px', borderRadius: '8px', marginTop: '10px', border: '1px solid #0dcaf0'}}>
-                  <p style={{margin: '0', color: '#0dcaf0', fontSize: '1.1rem'}}>📧 {guideApplicationStatus.approvalEmail}</p>
-                </div>
-                <p style={{fontSize: '0.9rem', color: '#aaa', marginTop: '10px'}}>Approved on: {new Date(guideApplicationStatus.approvalDate).toLocaleDateString()}</p>
-              </div>
-            ) : guideApplicationStatus?.status === 'Pending' ? (
-              <div style={{background: 'rgba(252,163,17,0.2)', border: '2px solid #fca311', padding: '20px', borderRadius: '10px', marginBottom: '20px'}}>
-                <h4 style={{color: '#fca311', margin: '0'}}>⏳ Your Application is Pending Admin Review</h4>
-                <p style={{color: '#aaa', fontSize: '0.9rem', marginTop: '10px'}}>Submitted on: {new Date(guideApplicationStatus.appliedAt).toLocaleDateString()}</p>
-              </div>
-            ) : (
-              <>
-                <p className="guide-desc">Apply to become an official ItihasYatra guide. Submit your proof and details for Admin verification.</p>
-                <form className="guide-form" onSubmit={async (e) => {
-                  e.preventDefault();
-                  if (!guideProofFile) {
-                    alert('Please upload Aadhar proof!');
-                    return;
-                  }
-                  if (!guideLang || !guideExp || !guideDesc) {
-                    alert('Please complete all guide application fields.');
-                    return;
-                  }
+                      {trip.guideNeeded ? (
+                        trip.guide ? (
+                          <div className="guide-info-box">
+                            <p className="success-text" style={{ fontSize: '1.1rem' }}>✅ <strong>Tour Guide Assigned</strong></p>
 
-                  let proofData = '';
-                  try {
-                    proofData = await readFileAsDataURL(guideProofFile);
-                  } catch (err) {
-                    console.error(err);
-                    alert('Unable to read proof file. Please try again with a different file.');
-                    return;
-                  }
+                            <div style={{ color: '#ddd', fontSize: '0.95rem', margin: '15px 0', padding: '10px', background: 'rgba(0,0,0,0.3)', borderRadius: '8px' }}>
+                              <p style={{ margin: '4px 0' }}>👤 <strong>Name:</strong> {trip.guide.username}</p>
+                              <p style={{ margin: '4px 0' }}>📧 <strong>Email:</strong> {trip.guide.email}</p>
+                              {trip.guide.languages && <p style={{ margin: '4px 0' }}>🗣️ <strong>Languages:</strong> {trip.guide.languages}</p>}
+                              {trip.guide.experience && <p style={{ margin: '4px 0' }}>⭐ <strong>Experience:</strong> {trip.guide.experience}</p>}
+                            </div>
 
-                  const apps = JSON.parse(localStorage.getItem('mockGuideApplicationsDB')) || {};
-                  apps[profileData.email] = {
-                    email: profileData.email,
-                    name: profileData.name,
-                    languages: guideLang,
-                    experience: guideExp,
-                    description: guideDesc,
-                    proofName: guideProofName || guideProofFile.name,
-                    proofData,
-                    status: 'Pending',
-                    appliedAt: new Date().toISOString()
-                  };
-                  localStorage.setItem('mockGuideApplicationsDB', JSON.stringify(apps));
-                  setGuideApplicationStatus(apps[profileData.email]);
-                  alert('Application submitted successfully! Admin will review and send approval email.');
-                }}>
-                  <textarea rows="4" placeholder="Briefly describe your knowledge of Indian heritage and history..." value={guideDesc} onChange={(e) => setGuideDesc(e.target.value)} required></textarea>
-                  <input type="text" placeholder="Languages known (e.g. English, Hindi, Tamil)" value={guideLang} onChange={(e) => setGuideLang(e.target.value)} required />
-                  <input type="number" placeholder="Years of experience" value={guideExp} onChange={(e) => setGuideExp(e.target.value)} required />
-                  
-                  <div style={{marginTop: '15px', marginBottom: '15px', padding: '15px', background: 'rgba(13,202,240,0.1)', border: '1px dashed #0dcaf0', borderRadius: '8px'}}>
-                    <label style={{display: 'block', color: '#0dcaf0', fontWeight: 'bold', marginBottom: '10px'}}>📄 Upload Aadhar/ID Proof (REQUIRED)</label>
-                    <input 
-                      type="file" 
-                      accept="image/*,.pdf" 
-                      onChange={(e) => {
-                        const file = e.target.files[0];
-                        setGuideProofFile(file);
-                        setGuideProofName(file?.name || '');
-                      }} 
-                      required
-                      style={{color: '#aaa', padding: '10px', background: 'rgba(255,255,255,0.05)', border: '1px solid #555', borderRadius: '5px', width: '100%'}}
-                    />
-                    <p style={{fontSize: '0.8rem', color: '#888', marginTop: '5px'}}>Accepted: PDF, JPG, PNG</p>
+                            <div className="chat-portal" style={{ marginTop: '15px' }}>
+                              <h5 style={{ margin: '0 0 10px 0' }}>Live Chat with Guide</h5>
+                              {trip.messages && trip.messages.length > 0 ? trip.messages.map((m, i) => {
+                                const isUser = m.sender === user.username;
+                                return (
+                                  <div key={i} className={`chat-msg ${isUser ? 'client' : 'guide'}`} style={{ padding: '8px', background: isUser ? 'rgba(0,0,0,0.3)' : 'rgba(252, 163, 17, 0.1)', borderRadius: '5px', marginBottom: '5px', borderLeft: isUser ? '3px solid #ccc' : '3px solid #fca311' }}>
+                                    <strong style={{ color: isUser ? '#ccc' : '#fca311' }}>
+                                      {m.sender} <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>{m.time}</span>
+                                    </strong>
+                                    <p style={{ margin: '5px 0 0 0' }}>{m.text}</p>
+                                  </div>
+                                );
+                              }) : <p style={{color: '#444', fontSize: '0.85rem'}}>No messages yet. Say hello!</p>}
+                            </div>
+
+                            <div style={{ display: 'flex', gap: '10px', marginTop: '15px' }}>
+                              <button className="action-btn" onClick={() => handleSendMessage(trip.id, trip.guide.username)} style={{ flex: 1, padding: '12px' }}>💬 Send Message</button>
+                              <a href={`mailto:${trip.guide.email}`} className="action-btn" style={{ flex: 1, display: 'inline-block', boxSizing: 'border-box', textAlign: 'center', padding: '12px', textDecoration: 'none', background: '#444', color: '#fff' }}>✉️ Email</a>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="waiting-box">
+                            <p className="waiting-text">⏳ Searching for a guide to accept your request...</p>
+                          </div>
+                        )
+                      ) : (
+                        <div className="guide-info-box" style={{ backgroundColor: 'var(--bg-color)', border: '1px solid rgba(255,255,255,0.1)' }}>
+                          <p className="success-text" style={{ color: '#fff' }}>🚶‍♂️ <strong>Self-Guided Trip</strong></p>
+                          <p>You did not request a tour guide.</p>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                  
-                  <button type="submit" className="submit-app-btn">Submit Application for Review</button>
-                </form>
-              </>
-            )}
+                ))
+              ) : (
+                <div className="empty-state">
+                  <p>No trip requests found for ID: {user.id}</p>
+                  <button onClick={() => navigate('/plan-trip')} className="action-btn">Plan a Trip Now</button>
+                </div>
+              )}
+            </div>
           </div>
         )}
 
-        {activeTab === 'history' && profileData.role === 'Tour Guide' && (
-          <div className="tab-pane animate-fade">
-            <h3>Completed Tour History</h3>
-            {tripsDB.filter(t => t.assignedGuide && (t.assignedGuide.name === profileData.name || t.assignedGuide.name === 'Meera Reddy') && t.status === 'Completed').map(trip => (
-              <div key={trip.id} className="trip-card completed">
-                <div className="trip-header">
-                  <h4>Guided: Trip to {trip.state}</h4>
-                  <span className="badge" style={{background: '#28a745'}}>Completed ✓</span>
-                </div>
-                <p><strong>Client:</strong> {trip.user} ({trip.email})</p>
-                <p><strong>Dates:</strong> {trip.dates} | <strong>Group:</strong> {trip.people} People</p>
-                
-                <hr style={{borderColor: '#444', margin: '15px 0'}}/>
-                <button className="action-btn outline" onClick={() => alert("Review requested from client!")} style={{marginTop: '10px'}}>Request Review from Client</button>
-              </div>
-            ))}
-            {tripsDB.filter(t => t.assignedGuide && (t.assignedGuide.name === profileData.name || t.assignedGuide.name === 'Meera Reddy') && t.status === 'Completed').length === 0 && (
-              <p style={{color: '#aaa', fontStyle: 'italic'}}>You have no previously recorded completed trips.</p>
-            )}
-          </div>
-        )}
+        {/* Guide Tab functionality has been moved to the Tour Guide Dashboard */}
       </div>
     </div>
   );
 };
+
 export default Profile;

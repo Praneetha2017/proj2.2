@@ -43,6 +43,29 @@
 }
 .virtual-tour-card:hover { border-color: #0dcaf0; }
 
+.spot-image-container {
+  width: 100%;
+  height: 200px;
+  overflow: hidden;
+  border-radius: 12px;
+  margin-bottom: 20px;
+  background: rgba(255,255,255,0.05);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.spot-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.4s ease;
+}
+
+.spot-card:hover .spot-img {
+  transform: scale(1.1);
+}
+
 .spot-icon { font-size: 3.5rem; margin-bottom: 15px; }
 .spot-card h3 { color: var(--accent-color); margin-bottom: 15px; font-size: 1.4rem; }
 .spot-card p { color: #aaa; margin-bottom: 10px; line-height: 1.5; }

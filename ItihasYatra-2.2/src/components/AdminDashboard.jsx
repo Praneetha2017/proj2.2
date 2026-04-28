@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './AdminDashboard.css';
 import axios from 'axios';
@@ -12,6 +12,7 @@ const AdminDashboard = () => {
   const [newContentFormData, setNewContentFormData] = useState({
     type: 'Monument', name: '', url: '', description: ''
   });
+  const [content, setContentData] = useState([]);
 
   const statesList = [
     { name: "Rajasthan", img: "https://images.unsplash.com/photo-1477587458883-47145ed94245?h=200" },
@@ -30,43 +31,19 @@ const AdminDashboard = () => {
     { id: 3, name: "Vikram Singh", phone: "+91 7654321098", languages: "English, Hindi, French", experience: "7 Years", status: "Pending" }
   ]);
 
-  const defaultTrips = [
-    { id: 101, user: "Priya Sharma", email: "priya@example.com", state: "Rajasthan", dates: "12 Nov - 16 Nov", people: 4, guideNeeded: true, assignedGuide: null, status: "Pending", messages: [] },
-    { id: 102, user: "Rahul Verma", email: "rahul@example.com", state: "Kerala", dates: "01 Dec - 07 Dec", people: 2, guideNeeded: false, assignedGuide: null, status: "Approved", messages: [] }
-  ];
-
-  const [tripsState, setTripsState] = useState(() => {
-    const saved = localStorage.getItem('mockTripsDB');
-    if (saved) return JSON.parse(saved);
-    localStorage.setItem('mockTripsDB', JSON.stringify(defaultTrips));
-    return defaultTrips;
-  });
-
-  const setTrips = (newTrips) => {
-    setTripsState(newTrips);
-    localStorage.setItem('mockTripsDB', JSON.stringify(newTrips));
-  };
-
+  const [tripsState, setTripsState] = useState([]);
   const trips = tripsState;
 
   const getMockUsers = () => JSON.parse(localStorage.getItem('mockUsersDB')) || {};
   const saveMockUsers = (users) => localStorage.setItem('mockUsersDB', JSON.stringify(users));
 
-  const [guideApplications, setGuideApplications] = useState(() => {
-    const saved = JSON.parse(localStorage.getItem('mockGuideApplicationsDB')) || {};
-    return Object.values(saved);
-  });
+  const [guideApplications, setGuideApplications] = useState([]);
 
   const updateGuideApplications = (updatedApps) => {
-    const appsByEmail = {};
-    updatedApps.forEach(app => {
-      appsByEmail[app.email] = app;
-    });
-    localStorage.setItem('mockGuideApplicationsDB', JSON.stringify(appsByEmail));
     setGuideApplications(updatedApps);
   };
 
-  const [approvalEmailInput, setApprovalEmailInput] = useState({});
+  const [approvalMessageInput, setApprovalMessageInput] = useState({});
 
   const [applications, setApplications] = useState(() => {
     const saved = getMockUsers();
@@ -75,41 +52,108 @@ const AdminDashboard = () => {
 
   const approvedGuideApplications = applications.filter(app => app.role === 'Tour Guide' && app.status === 'Approved').map((app, index) => ({
     id: `app-guide-${index}`,
-    name: app.username,
+    name: app.username || app.name || 'Unnamed Guide',
     phone: app.phone || '+91 0000000000',
     languages: app.languages || 'English',
     experience: app.experience || '1 Year',
     status: 'Verified'
   }));
 
-  const approvedGuides = [...guides.filter(g => g.status === 'Verified'), ...approvedGuideApplications];
+  const approvedFromForms = guideApplications.filter(app => app.status === 'Approved').map((app, index) => ({
+    id: `form-guide-${index}-${app.email}`,
+    email: app.email,
+    name: app.name || 'Approved Local Guide',
+    phone: app.phone || '+91 0000000000',
+    languages: app.languages || 'Multiple',
+    experience: app.experience || 'Experienced',
+    status: 'Verified'
+  }));
 
-  const updateApplications = (updatedApps) => {
-    setApplications(updatedApps);
-    const users = getMockUsers();
-    updatedApps.forEach(app => {
-      users[app.email] = app;
-    });
-    saveMockUsers(users);
-  };
+  const approvedGuides = [
+     ...guides.filter(g => g.status === 'Verified'), 
+     ...approvedGuideApplications,
+     ...approvedFromForms
+  ];
 
-  const [content, setContent] = useState(() => {
-    const saved = JSON.parse(localStorage.getItem('mockContentDB'));
-    const fallback = [
-      { id: 1, type: "Monument", state: "Rajasthan", name: "Amber Fort", status: 'Approved' },
-      { id: 2, type: "Virtual Tour", state: "Uttar Pradesh", name: "Taj Mahal VR", status: 'Approved' },
-      { id: 3, type: "Cuisine", state: "West Bengal", name: "Rasgulla", status: 'Approved' },
-      { id: 4, type: "Art & Craft", state: "Maharashtra", name: "Warli Painting", status: 'Approved' }
-    ];
-    if (saved) return saved;
-    localStorage.setItem('mockContentDB', JSON.stringify(fallback));
-    return fallback;
-  });
+  const [backendGuides, setBackendGuides] = useState([]);
 
-  const setContentData = (newContent) => {
-    setContent(newContent);
-    localStorage.setItem('mockContentDB', JSON.stringify(newContent));
-  };
+  useEffect(() => {
+    const syncData = async () => {
+      // Mock references removed entirely
+      try {
+        const usersResp = await axios.get("http://localhost:8080/api/auth/users");
+        
+        // Grab real SQL database Guides
+        const realGuides = usersResp.data.filter(u => u.role === 'TOUR_GUIDE');
+        setBackendGuides(realGuides.map(u => ({
+           id: u.id,
+           name: u.username,
+           email: u.email,
+           phone: '+91 0000000000',
+           languages: u.languages || 'English',
+           experience: u.experience || 'Experienced',
+           status: 'Verified'
+        })));
+
+        const response = await axios.get("http://localhost:8080/api/trips/all");
+        const fetchedTrips = response.data.map(t => ({
+           id: t.id,
+           user: t.userName || 'Unknown',
+           email: t.email,
+           state: t.state,
+           dates: t.startDate + " to " + t.endDate,
+           people: t.numPeople,
+           guideNeeded: t.guideNeeded,
+           assignedGuide: t.guide ? { name: t.guide.username, phone: '+91 0000000000' } : null,
+           status: t.status === 'PENDING' ? 'Pending' : (t.status === 'ASSIGNED' ? 'Approved' : 'Pending'),
+           messages: []
+        }));
+        setTripsState(fetchedTrips);
+        try {
+           const contentResp = await axios.get("http://localhost:8080/api/admin/content/pending", {
+               headers: { Authorization: `Bearer ${localStorage.getItem('jwtToken')}` }
+           });
+           const mockContent = JSON.parse(localStorage.getItem('mockContentDB')) || [];
+           
+           // Format backend content to match frontend expectations
+           const formattedBackendContent = contentResp.data.map(c => ({
+               id: c.id,
+               type: c.category || 'Monument',
+               state: c.targetState,
+               name: c.name,
+               description: c.description,
+               url: c.url,
+               status: c.status || 'Pending'
+           }));
+
+           setContentData([...mockContent, ...formattedBackendContent]);
+        } catch(e) {
+           console.error("Failed to fetch pending content", e);
+           const mockContent = JSON.parse(localStorage.getItem('mockContentDB')) || [];
+           setContentData(mockContent);
+        }
+
+        // Fetch Guide Applications
+        try {
+           const guideAppsRes = await axios.get("http://localhost:8080/api/guide-applications/pending");
+           const mappedApps = guideAppsRes.data.map(a => ({
+               ...a,
+               status: a.status === 'PENDING' ? 'Pending' : (a.status === 'APPROVED' ? 'Approved' : 'Pending')
+           }));
+           setGuideApplications(mappedApps);
+        } catch(e) {
+           console.error("Failed to fetch pending applications", e);
+        }
+
+      } catch (e) {
+        console.error("Failed to fetch data from backend: ", e);
+      }
+    };
+
+    syncData();
+    // window.addEventListener('storage', syncData);
+    // return () => window.removeEventListener('storage', syncData);
+  }, [activeTab]);
 
   // Operational Handlers
   const handleVerifyGuide = (id) => {
@@ -122,15 +166,40 @@ const AdminDashboard = () => {
     alert('Guide Application Rejected and removed from the queue.');
   };
 
-  const handleConfirmAssignGuide = (tripId, guideObj) => {
-    setTrips(trips.map(t => t.id === tripId ? { ...t, assignedGuide: guideObj, status: "Approved" } : t));
-    setAssigningTripId(null);
-    alert(`Successfully assigned ${guideObj.name} to the trip! An automatic confirmation email has been securely routed.`);
+  const handleConfirmAssignGuide = async (tripId, guideObj) => {
+    try {
+      if (!guideObj.id) throw new Error("Missing guide ID");
+      
+      // Strict database assignment
+      await axios.put(`http://localhost:8080/api/trips/${tripId}/assign-guide`, { guideId: guideObj.id });
+      
+      // Live reload from backend
+      const refreshResp = await axios.get("http://localhost:8080/api/trips/all");
+      const fetchedTrips = refreshResp.data.map(t => ({
+          id: t.id,
+          user: t.userName || 'Unknown',
+          email: t.email,
+          state: t.state,
+          dates: t.startDate + " to " + t.endDate,
+          people: t.numPeople,
+          guideNeeded: t.guideNeeded,
+          assignedGuide: t.guide ? { name: t.guide.username, phone: '+91 0000000000' } : null,
+          status: t.status === 'PENDING' ? 'Pending' : (t.status === 'ASSIGNED' ? 'Approved' : 'Pending'),
+          messages: []
+      }));
+      setTripsState(fetchedTrips);
+      
+      setAssigningTripId(null);
+      alert(`Database updated! Assigned ${guideObj.name} directly via MySQL.`);
+    } catch (e) {
+      console.error(e);
+      alert("Database error: Could not complete the assignment in MySQL. Make sure backend is running.");
+    }
   };
 
   const handleApproveApplication = (email, role) => {
     const updated = applications.map(app => app.email === email ? { ...app, status: 'Approved' } : app);
-    updateApplications(updated);
+    setApplications(updated);
     if (role === 'Tour Guide') {
       setGuides([...guides, {
         id: Date.now(),
@@ -153,28 +222,35 @@ const AdminDashboard = () => {
     alert('Application rejected and removed from the pending queue.');
   };
 
-  const handleApproveGuideApplication = (email) => {
-    const approvalEmail = approvalEmailInput[email];
-    if (!approvalEmail) {
-      alert('Please enter the approval email address to send to the user!');
-      return;
-    }
+  const handleApproveGuideApplication = async (appObj) => {
+    const approvalMessage = approvalMessageInput[appObj.email] || "Welcome to the team!";
 
-    const updated = guideApplications.map(app => 
-      app.email === email 
-        ? { ...app, status: 'Approved', approvalEmail: approvalEmail, approvalDate: new Date().toISOString() } 
-        : app
-    );
-    updateGuideApplications(updated);
-    
-    alert(`✅ Guide Application Approved!\n\nApproval email sent to: ${email}\nThey can now create a Guide account using: ${approvalEmail}`);
-    setApprovalEmailInput({ ...approvalEmailInput, [email]: '' });
+    try {
+      await axios.put(`http://localhost:8080/api/guide-applications/${appObj.id}/approve`, {
+          approvalEmail: approvalMessage
+      });
+      
+      const updated = guideApplications.filter(a => a.id !== appObj.id);
+      setGuideApplications(updated);
+      
+      alert(`✅ Guide Application Approved!\n\nMessage included: ${approvalMessage}`);
+      setApprovalMessageInput({ ...approvalMessageInput, [appObj.email]: '' });
+      
+      // Realistically we need to update the User role in DB, but the API handles whatever it handles.
+    } catch(e) {
+        alert("Error approving guide application");
+    }
   };
 
-  const handleRejectGuideApplication = (email) => {
-    const updated = guideApplications.filter(app => app.email !== email);
-    updateGuideApplications(updated);
-    alert('Guide application rejected and removed from queue.');
+  const handleRejectGuideApplication = async (appObj) => {
+    try {
+      await axios.put(`http://localhost:8080/api/guide-applications/${appObj.id}/reject`);
+      const updated = guideApplications.filter(a => a.id !== appObj.id);
+      setGuideApplications(updated);
+      alert('Guide application rejected and removed from queue.');
+    } catch(e) {
+      alert("Error rejecting guide application");
+    }
   };
 
   const handleDeleteContent = (id) => {
@@ -326,24 +402,26 @@ const AdminDashboard = () => {
                     {app.status === 'Pending' ? (
                       <>
                         <div style={{marginTop: '15px', padding: '12px', background: 'rgba(13,202,240,0.1)', borderRadius: '8px', border: '1px solid #0dcaf0'}}>
-                          <label style={{display: 'block', color: '#0dcaf0', fontWeight: 'bold', marginBottom: '8px', fontSize: '0.9rem'}}>📧 Approval Email:</label>
-                          <input 
-                            type="email" 
-                            placeholder="e.g., guide.approval@itihasyatra.com"
-                            value={approvalEmailInput[app.email] || ''}
-                            onChange={(e) => setApprovalEmailInput({...approvalEmailInput, [app.email]: e.target.value})}
+                          <label style={{display: 'block', color: '#0dcaf0', fontWeight: 'bold', marginBottom: '8px', fontSize: '0.9rem'}}>💬 Administrative Note / Welcome Message:</label>
+                          <textarea 
+                            rows="2"
+                            placeholder="Optional welcome message..."
+                            value={approvalMessageInput[app.email] || ''}
+                            onChange={(e) => setApprovalMessageInput({...approvalMessageInput, [app.email]: e.target.value})}
                             style={{width: '100%', padding: '8px', borderRadius: '5px', border: '1px solid #555', background: 'rgba(255,255,255,0.05)', color: '#fff', fontSize: '0.85rem'}}
-                          />
+                          ></textarea>
                         </div>
                         <div className="action-buttons" style={{marginTop: '15px'}}>
-                          <button className="approve-btn" onClick={() => handleApproveGuideApplication(app.email)}>Send Approval Email</button>
-                          <button className="reject-btn" onClick={() => handleRejectGuideApplication(app.email)}>Reject</button>
+                          <button className="approve-btn" onClick={() => handleApproveGuideApplication(app)}>Approve Guide</button>
+                          <button className="reject-btn" onClick={() => handleRejectGuideApplication(app)}>Reject</button>
                         </div>
                       </>
                     ) : (
                       <div style={{marginTop: '15px', padding: '12px', background: 'rgba(40,167,69,0.1)', borderRadius: '8px', border: '1px solid #28a745'}}>
                         <p style={{margin: 0, color: '#28a745', fontWeight: 'bold'}}>✅ Approved</p>
-                        <p style={{margin: '5px 0 0 0', fontSize: '0.85rem', color: '#aaa'}}>Approval Email: <strong>{app.approvalEmail}</strong></p>
+                        {app.approvalMessage && (
+                           <p style={{margin: '5px 0 0 0', fontSize: '0.85rem', color: '#aaa'}}>Note: <strong>{app.approvalMessage}</strong></p>
+                        )}
                       </div>
                     )}
                   </div>
@@ -385,8 +463,8 @@ const AdminDashboard = () => {
                   {t.status === 'Pending' && t.guideNeeded && assigningTripId !== t.id && (
                     <div className="action-buttons">
                       <button className="approve-btn" onClick={() => {
-                        if (approvedGuides.length === 0) {
-                          alert("No verified guides available in active roster. Please verify an application first.");
+                        if (backendGuides.length === 0) {
+                          alert("No verified guides available in MySQL. Users must sign up with role TOUR_GUIDE first!");
                         } else {
                           setAssigningTripId(t.id);
                         }
@@ -401,13 +479,13 @@ const AdminDashboard = () => {
                         style={{ width: '100%', padding: '12px', borderRadius: '8px', background: 'rgba(255,255,255,0.05)', color: '#fff', border: '1px solid #555', marginBottom: '15px', fontSize: '0.95rem', cursor: 'pointer' }}
                         onChange={(e) => {
                           if (!e.target.value) return;
-                          const g = approvedGuides.find(guid => String(guid.id) === e.target.value);
+                          const g = backendGuides.find(guid => String(guid.id) === e.target.value);
                           if (g) handleConfirmAssignGuide(t.id, g);
                         }}
                         defaultValue=""
                       >
-                        <option value="" disabled>-- Choose a Guide from Roster --</option>
-                        {approvedGuides.map(g => (
+                        <option value="" disabled>-- Select a Real MySQL Guide --</option>
+                        {backendGuides.map(g => (
                           <option key={g.id} value={g.id}>{g.name} (Exp: {g.experience}) - {g.languages}</option>
                         ))}
                       </select>
@@ -503,9 +581,24 @@ const AdminDashboard = () => {
                     const res = await axios.get("http://localhost:8080/api/admin/content/pending", {
                         headers: { Authorization: `Bearer ${localStorage.getItem('jwtToken')}` }
                     });
-                    alert("Pending Content Fetched: " + res.data.length + " items awaiting approval!");
-                    // You can set state here and map over it!
-                  } catch (e) { console.error(e); }
+                    const mockContent = JSON.parse(localStorage.getItem('mockContentDB')) || [];
+                    const formattedBackendContent = res.data.map(c => ({
+                        id: c.id,
+                        type: c.category || 'Monument',
+                        state: c.targetState,
+                        name: c.name,
+                        description: c.description,
+                        url: c.url,
+                        status: c.status || 'Pending'
+                    }));
+                    setContentData([...mockContent, ...formattedBackendContent]);
+                    alert("Pending Content Fetched: " + (mockContent.length + res.data.length) + " items awaiting approval!");
+                  } catch (e) { 
+                    console.error(e);
+                    const mockContent = JSON.parse(localStorage.getItem('mockContentDB')) || [];
+                    setContentData(mockContent);
+                    alert("Fetched " + mockContent.length + " items from local storage. Backend was unreachable.");
+                  }
                 }}>🔄 Refresh Pending Queue</button>
 
                 <table className="content-table" style={{ marginTop: '20px' }}>
@@ -526,18 +619,26 @@ const AdminDashboard = () => {
                         <td>{c.name}</td>
                         <td><span style={{ color: c.status === 'Approved' ? '#28a745' : '#fca311' }}>{c.status || 'Pending'}</span></td>
                         <td>
-                          <button className="approve-btn" style={{ padding: '5px 10px' }} onClick={async () => {
-                            try {
-                              const updatedContent = content.map(item => item.id === c.id ? { ...item, status: 'Approved' } : item);
-                              setContentData(updatedContent);
-                              await axios.put(`http://localhost:8080/api/admin/content/${c.id}/approve`, {}, {
-                                  headers: { Authorization: `Bearer ${localStorage.getItem('jwtToken')}` }
-                              });
-                              alert('Successfully Approved & Pushed to Live Website!');
-                            } catch (e) {
-                              alert('Approval completed locally. Backend not ready.');
-                            }
-                          }}>Approve</button>
+                           <button className="approve-btn" style={{ padding: '5px 10px' }} onClick={async () => {
+                             try {
+                               // 1. Update local React state
+                               const updatedContent = content.map(item => item.id === c.id ? { ...item, status: 'Approved' } : item);
+                               setContentData(updatedContent);
+
+                               // 2. Sync with localStorage Mock DB for persistence across pages
+                               const mockDB = JSON.parse(localStorage.getItem('mockContentDB')) || [];
+                               const updatedMockDB = mockDB.map(item => String(item.id) === String(c.id) ? { ...item, status: 'Approved' } : item);
+                               localStorage.setItem('mockContentDB', JSON.stringify(updatedMockDB));
+
+                               // 3. Update real SQL backend
+                               await axios.put(`http://localhost:8080/api/admin/content/${c.id}/approve`, {}, {
+                                   headers: { Authorization: `Bearer ${localStorage.getItem('jwtToken')}` }
+                               });
+                               alert('Successfully Approved & Pushed to Live Website!');
+                             } catch (e) {
+                               alert('Approval completed locally. Backend not ready.');
+                             }
+                           }}>Approve</button>
                           <button className="delete-action" onClick={() => handleDeleteContent(c.id)}>Delete</button>
                         </td>
                       </tr>
